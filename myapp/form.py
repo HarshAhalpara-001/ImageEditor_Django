@@ -7,23 +7,27 @@ class ImageUploadForm(forms.ModelForm):
         fields = ['image']
 
 
-class EditOptionsForm(forms.Form):  # Use forms.Form if not linked to a specific model
-    number = forms.IntegerField(label='Enter a number', min_value=1, required=True)
+class EditOptionsForm(forms.Form):
+    width = forms.IntegerField(label='Resize Width', required=False)
+    height = forms.IntegerField(label='Resize Height', required=False)
+    scale = forms.FloatField(label='Scale Factor', min_value=0.1, max_value=10.0, required=False, help_text="Use scale for proportional resizing (e.g., 1.5 for 150%)")
     
-    # You can add more fields if needed
-    # For example, an optional text field
+    INTERPOLATION_CHOICES = [
+        ('INTER_LINEAR', 'Linear'),
+        ('INTER_CUBIC', 'Cubic'),
+        ('INTER_NEAREST', 'Nearest'),
+        ('INTER_LANCZOS4', 'Lanczos4'),
+    ]
+    interpolation = forms.ChoiceField(choices=INTERPOLATION_CHOICES, label='Interpolation Method', required=True)
+
     comment = forms.CharField(label='Comment', required=False, max_length=200)
 
-    def clean_number(self):
-        data = self.cleaned_data['number']
-        # Custom validation (if needed)
-        if data < 0:
-            raise forms.ValidationError("Number must be positive!")
-        return data
+    def clean(self):
+        cleaned_data = super().clean()
+        width = cleaned_data.get('width')
+        height = cleaned_data.get('height')
+        scale = cleaned_data.get('scale')
 
-    # If you want to process the data after submission
-    def process_data(self):
-        # Implement your logic to handle the number here
-        number = self.cleaned_data['number']
-        # Perform any operations based on the number
-        return number  # Return whatever result you need
+        if not width and not height and not scale:
+            raise forms.ValidationError("Please provide either width, height, or scale to resize the image.")
+        return cleaned_data
